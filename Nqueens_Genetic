@@ -1,0 +1,133 @@
+import numpy as np
+import random
+
+def init_population(pop_size, n):
+    return np.array([np.random.permutation(np.arange(n)) for _ in range(pop_size)])
+
+def calculate_fitness(population):
+    fitness_vals = []
+    for x in population:
+        penalty = 0
+        for i in range(n):
+            r = x[i]
+            for j in range(n):
+                if i == j:
+                    continue
+                d = abs(i - j)
+                if x[j] in [r, r - d, r + d]:
+                    penalty += 1
+        fitness_vals.append(penalty)
+    return -1 * np.array(fitness_vals)
+
+def selection(population, fitness_vals):
+    probs = fitness_vals.copy()
+    probs += abs(probs.min()) + 1
+    probs = probs / probs.sum()
+    N = len(population)
+    indices = np.arange(N)
+    selected_indices = np.random.choice(indices, size=N, p=probs)
+    selected_population = population[selected_indices]
+    return selected_population
+
+def crossover(parent1, parent2, pc):
+    r = np.random.random()
+    if r < pc:
+        m = np.random.randint(1, n)
+
+        # Permutation-based crossover
+        perm = np.arange(n)
+        np.random.shuffle(perm)
+
+        child1 = parent1.copy()
+        child2 = parent2.copy()
+
+        child1[perm[:m]] = parent2[perm[:m]]
+        child2[perm[:m]] = parent1[perm[:m]]
+    else:
+        child1 = parent1.copy()
+        child2 = parent2.copy()
+
+    return child1, child2
+
+def mutation(individual, pm):
+    r = np.random.random()
+    if r < pm:
+        m = random.randint(0, n - 1)
+        new_value = np.random.randint(0, n - 1)
+
+        # Ensure the new value is different from the original one
+        while new_value == individual[m]:
+            new_value = np.random.randint(0, n - 1)
+
+        individual[m] = new_value
+
+    return individual
+
+def crossover_mutation(selected_pop, pc, pm):
+    N_pop = len(selected_pop)
+    new_pop = np.empty((N_pop, n), dtype=int)
+
+    for i in range(0, N_pop, 2):
+        parent1 = selected_pop[i]
+        parent2 = selected_pop[i + 1]
+        child1, child2 = crossover(parent1, parent2, pc)
+        new_pop[i] = child1
+        new_pop[i + 1] = child2
+
+    for i in range(N_pop):
+        mutation(new_pop[i], pm)
+
+    return new_pop
+
+def queens(pop_size, n, max_generations, pc=0.7, pm=0.3):
+    initial_population = init_population(pop_size, n)
+    best_fitness_overall = None
+    i_gen = 0
+
+    while True:
+        fitness_vals = calculate_fitness(initial_population)
+        best_i = fitness_vals.argmax()
+        best_fitness = fitness_vals[best_i]
+
+        if best_fitness_overall is None or best_fitness > best_fitness_overall:
+            best_fitness_overall = best_fitness
+            best_solution = initial_population[best_i]
+
+        print(f'\ri_gen = {i_gen:06} -f={-best_fitness_overall:03}', end='')
+
+        if best_fitness == 0:
+            print('\nFound optimal solution:')
+            print_board(best_solution)
+            break
+        if (i_gen >= max_generations):
+            initial_population = init_population(pop_size, n)
+            max_generations = 10000
+            i_gen = 0
+
+        selected_pop = selection(initial_population, fitness_vals)
+        initial_population = crossover_mutation(selected_pop, pc, pm)
+        i_gen += 1
+
+    print()
+
+def print_board(solution):
+    board = np.full((n, n), '.', dtype=str)  # Initialize with '.' as empty cells
+    for i, j in enumerate(solution):
+        board[i, j] = 'Q'
+    for row in board:
+        print(' '.join(row))
+    print()
+
+
+# Example usage:
+n = int(input("Enter the number of queens (n): "))
+
+while n<3 :
+    print("Input of N queens must be More Than 3 queens !")
+    n = int(input("Re-enter the number of queens (n): "))
+    
+
+
+pop_size = 100
+max_generations = 10000
+queens(pop_size, n, max_generations, pc=0.7, pm=0.3)
